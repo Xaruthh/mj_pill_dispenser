@@ -15,16 +15,6 @@
 
 
 // *** CALIBRATE STUFF ETC. ***
-void check_status(int steps, bool calib_status) { // Prints for system calibration
-    if (!calib_status) {
-        printf("System is not calibrated\n");
-        printf("Steps per revolution: not available\n");
-    } else {
-        printf("System is calibrated!\n");
-        printf("Steps per revolution: %d \n", steps);
-    }
-}
-
 void run_once(void) {
     const int sequence[8][4] = { // 8 x 4 array for coils
         {1, 0, 0, 0},

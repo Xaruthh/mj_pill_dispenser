@@ -32,7 +32,7 @@
 #define SHORT_BLINK_DELAY 200
 #define LONG_BLINK_DELAY 500
 #define ADC_1 1
-#define DISPENSE_DELAY 30000
+#define DISPENSE_DELAY 5000
 #define STEP_DELAY 2
 #define PILL_THRESHOLD 500
 
@@ -42,8 +42,6 @@
 // Function prototypes below
 //
 // *** CALIBRATE STUFF ETC. ***
-void check_status(int steps, bool calib_status);
-
 void run_once(void);
 
 void gpio_activate(const int *values);

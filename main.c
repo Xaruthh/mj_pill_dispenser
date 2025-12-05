@@ -51,6 +51,8 @@ int main(void) {
         // Switch case for the main loop
         switch (state) {
             case 1:
+                printf("-- Welcome to the pill dispenser --\n");
+                printf("Press the middle button (SW_1) to first calibrate the system, please.\n");
                 idle_blink();
                 if (!button_pressed(SW_1)) {
                     state = 2;
@@ -59,10 +61,12 @@ int main(void) {
                 }
                 break;
             case 2:
+                printf("System is being calibrated, please hold on...\n");
                 calibrate_system(&steps_per_rev, &calib_status);
                 state = 3;
                 break;
             case 3:
+                printf("System has been calibrated, press middle button (SW_1) to start dispensing pills every 30 seconds.\n");
                 set_brightness(BRIGHTNESS);
                 if (!button_pressed(SW_1)) {
                     last_dispense_time = to_ms_since_boot(get_absolute_time());
@@ -77,11 +81,14 @@ int main(void) {
                     run_system(1, &steps_per_rev, &calib_status);
                     if (!pill_dispensed()) {
                         blink_5_times();
+                        printf("No pill drop was detected, ensure you have loaded the dispenser.\n");
                     }
+                    printf("A pill was successfully dispensed\n");
                     dispenses_done++;
                     last_dispense_time = get_absolute_time();
                 }
                 if (dispenses_done >= 7) {
+                    printf("All possible pills have been dispensed, restarting the cycle...\n");
                     state = 1;
                 }
                 break;
