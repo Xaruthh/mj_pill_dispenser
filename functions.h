@@ -1,6 +1,9 @@
 #ifndef MJ_PILL_DISPENSER_FUNCTIONS_H
 #define MJ_PILL_DISPENSER_FUNCTIONS_H
 
+// Header file for pill dispenser project
+// Contains pin definitions, constants, and function prototypes
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <pico/types.h>
@@ -18,7 +21,7 @@
 // LED macros
 #define DIVIDER 125
 #define WRAP 999
-#define BRIGHTNESS 200
+#define BRIGHTNESS 50
 #define MINIMUM_BRIGHTNESS 0
 #define LED_1 22
 #define LED_2 21
@@ -34,7 +37,7 @@
 #define ADC_1 1
 #define DISPENSE_DELAY 5000
 #define STEP_DELAY 2
-#define PILL_THRESHOLD 500
+#define PILL_THRESHOLD 1000
 
 
 
@@ -52,6 +55,8 @@ void calibrate_system(int *steps_per_rev, bool *calib_status);
 
 bool pill_dispensed(void);
 
+void align_system(void);
+
 
 // *** LED INIT ETC. BELOW ***
 void pwm_led(uint pin);
@@ -62,8 +67,8 @@ void set_brightness(int level);
 
 bool button_pressed(int pin);
 
-int idle_blink(void);
+void idle_blink(void);
 
-int blink_5_times(void);
+void blink_5_times(void);
 
 #endif //MJ_PILL_DISPENSER_FUNCTIONS_H

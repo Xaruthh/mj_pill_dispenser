@@ -10,13 +10,13 @@
 
 
 //
-// Functions below
+// Helper functions for motor control, calibration, LED handling, and sensor checks below
 //
 
-
 // *** CALIBRATE STUFF ETC. ***
-void run_once(void) {
-    const int sequence[8][4] = { // 8 x 4 array for coils
+void run_once(void) { // Move one step -- using half stepping
+    const int sequence[8][4] = {
+        // 8 x 4 array for coils
         {1, 0, 0, 0},
         {1, 1, 0, 0},
         {0, 1, 0, 0},
@@ -27,11 +27,12 @@ void run_once(void) {
         {1, 0, 0, 1}
     };
 
-    static int step = 0;
-    gpio_activate(sequence[step]);
+    static int step = 0; // Remember current step across calls
+    gpio_activate(sequence[step]); // Energize the coils in a sequence
     step++;
-    if (step == 8) { // Max 8 steps per sequence
-        step = 0;
+    if (step == 8) {
+        // Max 8 steps per sequence
+        step = 0; // Go back to 0 after 8
     }
     sleep_ms(STEP_DELAY); // Delay between steps
 }
@@ -52,7 +53,7 @@ void run_system(int times, int *steps_per_rev, bool *calib_status) {
     int total_steps;
 
     if (times == 0) {
-        total_steps = *steps_per_rev;
+        total_steps = *steps_per_rev; // One full revolution
         printf("Running one full revolution ... \n");
     } else {
         total_steps = *steps_per_rev / 8 * times; // 8 = steps per sequence
@@ -60,11 +61,12 @@ void run_system(int times, int *steps_per_rev, bool *calib_status) {
     }
 
     for (int i = 0; i < total_steps; i++) {
-        run_once();
+        run_once(); // Turn one step
     }
-    printf("Run Complete!\n");
 }
 
+// Measure steps per revolution by detecting falling edges from opto sensor
+// Average over 3 spins for accuracy
 void calibrate_system(int *steps_per_rev, bool *calib_status) {
     int total_steps = 0;
 
@@ -108,12 +110,20 @@ void calibrate_system(int *steps_per_rev, bool *calib_status) {
     printf("Calibration is done! Steps per revolution = %d\n", *steps_per_rev);
 }
 
+// Read piezo sensor via ADC; threshold determines if pill drop was detected
 bool pill_dispensed(void) {
-    uint16_t result = adc_read();
+    uint16_t result = adc_read(); // Read piezo value
     if (result > PILL_THRESHOLD) {
-        return true;
+        return false; // Pill not detected
     }
-    return false;
+    return true; // Pill detected
+}
+
+// After moving approximate steps, fine-tune until sensor edge is detected
+void align_system(void) {
+    for (int i = 0; i < 180; i++) {
+        run_once();
+    }
 }
 
 // *** LED INIT ETC. BELOW ***
@@ -143,24 +153,32 @@ void set_brightness(int level) {
 }
 
 bool button_pressed(int pin) {
-    return gpio_get(pin);
+    return gpio_get(pin); // Check if button pressed
 }
 
-int idle_blink(void) {
-    set_brightness(BRIGHTNESS);
-    sleep_ms(LONG_BLINK_DELAY);
-    set_brightness(MINIMUM_BRIGHTNESS);
-    sleep_ms(LONG_BLINK_DELAY);
-    return 0;
+// Non-blocking LED blink to avoid system sleeping when button is pressed
+void idle_blink(void) {
+    // Using static here so it remembers the state of the bool and last_toggle
+    static bool led_state = false;
+    static uint32_t last_toggle = 0;
+
+    // Compare to a timer of 500ms and check if it has passed and toggle LED state
+    uint32_t now = to_ms_since_boot(get_absolute_time());
+    if (now - last_toggle >= LONG_BLINK_DELAY) {
+        set_brightness(led_state ? MINIMUM_BRIGHTNESS : BRIGHTNESS); // Set LED off/on depending on led state flag
+        led_state = !led_state;
+        last_toggle = now;
+    }
 }
 
-int blink_5_times(void) {
-    for (int i = 0; i < 5; i++) { // Blink 5 times when piezo didn't recognize a pill drop
+// This one is blocking the system with the sleeps, but it's okay because we want system to
+// show warning and not spin the wheel while it's blinking the LEDs
+void blink_5_times(void) {
+    for (int i = 0; i < 5; i++) {
+        // Blink 5 times when piezo didn't recognize a pill drop
         set_brightness(BRIGHTNESS);
         sleep_ms(SHORT_BLINK_DELAY);
         set_brightness(MINIMUM_BRIGHTNESS);
         sleep_ms(SHORT_BLINK_DELAY);
     }
-    return 0;
 }
-
