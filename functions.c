@@ -14,7 +14,8 @@
 //
 
 // *** CALIBRATE STUFF ETC. ***
-void run_once(void) { // Move one step -- using half stepping
+void run_one_step(void) {
+    // Move one step -- using half stepping
     const int sequence[8][4] = {
         // 8 x 4 array for coils
         {1, 0, 0, 0},
@@ -44,30 +45,20 @@ void gpio_activate(const int *values) {
     gpio_put(COIL_D, values[3]);
 }
 
-void run_system(int times, int *steps_per_rev, bool *calib_status) {
-    if (!*calib_status) {
-        printf("System is not calibrated, run 'calib' first pls.\n");
-        return;
-    }
-
+void run_system(int times, int *steps_per_rev) {
     int total_steps;
 
-    if (times == 0) {
-        total_steps = *steps_per_rev; // One full revolution
-        printf("Running one full revolution ... \n");
-    } else {
-        total_steps = *steps_per_rev / 8 * times; // 8 = steps per sequence
-        printf("Running %d x 1/8 revolution = %d steps ... \n", times, total_steps);
-    }
+    total_steps = *steps_per_rev / 8 * times; // 8 = steps per sequence
+    printf("Running %d x 1/8 revolution = %d steps ... \n", times, total_steps);
 
     for (int i = 0; i < total_steps; i++) {
-        run_once(); // Turn one step
+        run_one_step(); // Turn one step
     }
 }
 
 // Measure steps per revolution by detecting falling edges from opto sensor
 // Average over 3 spins for accuracy
-void calibrate_system(int *steps_per_rev, bool *calib_status) {
+void calibrate_system(int *steps_per_rev) {
     int total_steps = 0;
 
     bool old = gpio_get(OPTO_FORK);
@@ -75,7 +66,7 @@ void calibrate_system(int *steps_per_rev, bool *calib_status) {
 
     // Wait for first falling edge
     while (true) {
-        run_once();
+        run_one_step();
         new = gpio_get(OPTO_FORK);
 
         if (old == 1 && new == 0) {
@@ -90,7 +81,7 @@ void calibrate_system(int *steps_per_rev, bool *calib_status) {
         old = gpio_get(OPTO_FORK);
 
         while (true) {
-            run_once();
+            run_one_step();
             step_counter++;
             new = gpio_get(OPTO_FORK);
 
@@ -105,7 +96,6 @@ void calibrate_system(int *steps_per_rev, bool *calib_status) {
 
     // Average the measurements
     *steps_per_rev = total_steps / SPIN_THRICE;
-    *calib_status = true;
 
     printf("Calibration is done! Steps per revolution = %d\n", *steps_per_rev);
 }
@@ -122,7 +112,7 @@ bool pill_dispensed(void) {
 // After moving approximate steps, fine-tune until sensor edge is detected
 void align_system(void) {
     for (int i = 0; i < 180; i++) {
-        run_once();
+        run_one_step();
     }
 }
 
@@ -160,7 +150,7 @@ bool button_pressed(int pin) {
 void idle_blink(void) {
     // Using static here so it remembers the state of the bool and last_toggle
     static bool led_state = false;
-    static uint32_t last_toggle = 0;
+    static uint32_t last_toggle = 0; // Using uint32_t because of the time since boot function
 
     // Compare to a timer of 500ms and check if it has passed and toggle LED state
     uint32_t now = to_ms_since_boot(get_absolute_time());

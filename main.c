@@ -17,7 +17,6 @@ int main(void) {
     int state = 1;
     int steps_per_rev = 0;
     int dispenses_done = 0;
-    bool calib_status = false;
     bool printed = false; // To avoid flooding the terminal with prints...
 
     // Configure button and sensor inputs, and motor coil outputs below
@@ -81,14 +80,14 @@ int main(void) {
                     printf("System is being calibrated, please wait...\n");
                     printed = true;
                 }
-                calibrate_system(&steps_per_rev, &calib_status); // calibrate the system and go to state 3
+                calibrate_system(&steps_per_rev); // calibrate the system and go to state 3
                 align_system();
                 state = 3;
                 printed = false;
                 break;
             case 3:
                 if (!printed) {
-                    printf("System has been calibrated, add your desired pills to the dispenser compartments, please\n");
+                    printf("System has been calibrated, add your desired pills to the dispenser compartments.\n");
                     printf("Press the middle button (SW_1) to start dispensing pills every 30 seconds.\n");
                     printed = true;
                 }
@@ -111,19 +110,19 @@ int main(void) {
                 }
                 if (absolute_time_diff_us(last_dispense_time, get_absolute_time()) >= DISPENSE_DELAY * 1000) {
                     // = 30 seconds delay
-                    run_system(1, &steps_per_rev, &calib_status); // Run once
+                    run_system(1, &steps_per_rev); // Run once
                     if (!pill_dispensed()) {
                         // If no pill was detected give a warning and blink LEDs 5 times
                         blink_5_times();
                         printf("No pill drop was detected, ensure you have loaded the dispenser.\n");
                     } else {
-                        printf("A pill was successfully dispensed\n");
+                        printf("A pill was successfully dispensed.\n");
                     }
                     dispenses_done++;
                     last_dispense_time = get_absolute_time();
                 }
                 // Go back to beginning after dispensing all possible pill slots
-                if (dispenses_done >= 7) {
+                if (dispenses_done >= 7) { // 7 = Max available slots
                     printf("All possible pills have been dispensed, restarting the cycle...\n");
                     state = 1;
                     printed = false;

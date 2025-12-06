@@ -45,20 +45,20 @@
 // Function prototypes below
 //
 // *** CALIBRATE STUFF ETC. ***
-void run_once(void);
+void run_one_step(void);
 
 void gpio_activate(const int *values);
 
-void run_system(int times, int *steps_per_rev, bool *calib_status);
+void run_system(int times, int *steps_per_rev);
 
-void calibrate_system(int *steps_per_rev, bool *calib_status);
+void calibrate_system(int *steps_per_rev);
 
 bool pill_dispensed(void);
 
 void align_system(void);
 
 
-// *** LED INIT ETC. BELOW ***
+// *** LED INIT ETC. ***
 void pwm_led(uint pin);
 
 void slice_and_channel_helper(int pin, int level);
