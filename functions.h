@@ -29,8 +29,8 @@
 
 // General macros
 #define SPIN_THRICE 3
-#define DEBOUNCE_MEDIUM 50
 #define DEBOUNCE_HIGH 100
+#define DEBOUNCE_MEDIUM 50
 #define DEBOUNCE_LOW 25
 #define SHORT_BLINK_DELAY 200
 #define LONG_BLINK_DELAY 500
@@ -51,11 +51,11 @@ void gpio_activate(const int *values);
 
 void run_system(int times, int *steps_per_rev);
 
-void calibrate_system(int *steps_per_rev);
+int calibrate_system(int *steps_per_rev);
 
 bool pill_dispensed(void);
 
-void align_system(void);
+void align_system(int alignment_steps);
 
 
 // *** LED INIT ETC. ***

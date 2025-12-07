@@ -4,7 +4,6 @@
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/gpio.h"
-#include "hardware/adc.h"
 
 // all the includes here ^
 
@@ -58,60 +57,88 @@ void run_system(int times, int *steps_per_rev) {
 
 // Measure steps per revolution by detecting falling edges from opto sensor
 // Average over 3 spins for accuracy
-void calibrate_system(int *steps_per_rev) {
+// Also return steps for alignment used later (How many steps is that OPTO hole in the wheel)
+int calibrate_system(int *steps_per_rev) {
     int total_steps = 0;
-
+    int opto_steps_total = 0;
     bool old = gpio_get(OPTO_FORK);
     bool new;
 
-    // Wait for first falling edge
     while (true) {
         run_one_step();
         new = gpio_get(OPTO_FORK);
-
         if (old == 1 && new == 0) {
             break;
         }
         old = new;
     }
 
-    // Count steps until next falling edge
     for (int i = 0; i < SPIN_THRICE; i++) {
         int step_counter = 0;
+        int current_opto_steps = 0;
+
         old = gpio_get(OPTO_FORK);
 
         while (true) {
             run_one_step();
             step_counter++;
             new = gpio_get(OPTO_FORK);
-
+            if (new == 0) {
+                current_opto_steps++;
+            }
             if (old == 1 && new == 0) {
                 break;
             }
             old = new;
         }
+
         total_steps += step_counter;
-        printf("Measurement %d: %d steps \n", i + 1, step_counter);
+        opto_steps_total += current_opto_steps;
+
+        printf("Measurement %d: %d steps (OPTO window: %d steps)\n",
+               i + 1, step_counter, current_opto_steps);
     }
 
     // Average the measurements
     *steps_per_rev = total_steps / SPIN_THRICE;
+    int alignment_steps = opto_steps_total / SPIN_THRICE / 2; // midpoint of the OPTO window
 
-    printf("Calibration is done! Steps per revolution = %d\n", *steps_per_rev);
+    printf("Calibration done. Steps/rev = %d, alignment_steps = %d\n",
+           *steps_per_rev, alignment_steps);
+
+    return alignment_steps;
 }
 
 // Read piezo sensor via ADC; threshold determines if pill drop was detected
 bool pill_dispensed(void) {
-    uint16_t result = adc_read(); // Read piezo value
-    if (result > PILL_THRESHOLD) {
-        return false; // Pill not detected
+    const uint32_t timeout = PILL_THRESHOLD;
+    uint32_t start = to_ms_since_boot(get_absolute_time());
+
+    bool prev = gpio_get(PIEZO_SENSOR);
+    bool now;
+    uint32_t pulse_start = 0;
+    bool pulse_seen = false;
+
+    while (to_ms_since_boot(get_absolute_time()) - start < timeout) {
+        now = gpio_get(PIEZO_SENSOR);
+        if (prev == 1 && now == 0) {
+            pulse_start = to_ms_since_boot(get_absolute_time());
+            pulse_seen = true;
+        }
+        if (pulse_seen) {
+            uint32_t duration = to_ms_since_boot(get_absolute_time()) - pulse_start;
+            if (duration > 5) {
+                return true;
+            }
+        }
+        prev = now;
     }
-    return true; // Pill detected
+    return false;
 }
 
 // After moving approximate steps, fine-tune until sensor edge is detected
-void align_system(void) {
-    for (int i = 0; i < 180; i++) {
+void align_system(int alignment_steps) {
+    for (int i = 0; i < alignment_steps; i++) {
         run_one_step();
     }
 }
