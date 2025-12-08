@@ -35,9 +35,10 @@
 #define SHORT_BLINK_DELAY 200
 #define LONG_BLINK_DELAY 500
 #define ADC_1 1
-#define DISPENSE_DELAY 5000
+#define DISPENSE_DELAY 2000
 #define STEP_DELAY 2
-#define PILL_THRESHOLD 1000
+#define TIMEOUT 1000
+#define DISPENSE_SLEEP 200
 
 
 
@@ -52,6 +53,8 @@ void gpio_activate(const int *values);
 void run_system(int times, int *steps_per_rev);
 
 int calibrate_system(int *steps_per_rev);
+
+void piezo_callback(uint gpio, uint32_t events);
 
 bool pill_dispensed(void);
 

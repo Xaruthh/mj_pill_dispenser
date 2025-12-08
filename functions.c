@@ -12,6 +12,8 @@
 // Helper functions for motor control, calibration, LED handling, and sensor checks below
 //
 
+volatile bool pill_detected_flag = false; // Always fetch the real value
+
 // *** CALIBRATE STUFF ETC. ***
 void run_one_step(void) {
     // Move one step -- using half stepping
@@ -48,7 +50,7 @@ void run_system(int times, int *steps_per_rev) {
     int total_steps;
 
     total_steps = *steps_per_rev / 8 * times; // 8 = steps per sequence
-    printf("Running %d x 1/8 revolution = %d steps ... \n", times, total_steps);
+    printf("\nRunning %d x 1/8 revolution = %d steps ... \n", times, total_steps);
 
     for (int i = 0; i < total_steps; i++) {
         run_one_step(); // Turn one step
@@ -91,10 +93,8 @@ int calibrate_system(int *steps_per_rev) {
             }
             old = new;
         }
-
         total_steps += step_counter;
         opto_steps_total += current_opto_steps;
-
         printf("Measurement %d: %d steps (OPTO window: %d steps)\n",
                i + 1, step_counter, current_opto_steps);
     }
@@ -109,31 +109,23 @@ int calibrate_system(int *steps_per_rev) {
     return alignment_steps;
 }
 
-// Read piezo sensor via ADC; threshold determines if pill drop was detected
-bool pill_dispensed(void) {
-    const uint32_t timeout = PILL_THRESHOLD;
-    uint32_t start = to_ms_since_boot(get_absolute_time());
-
-    bool prev = gpio_get(PIEZO_SENSOR);
-    bool now;
-    uint32_t pulse_start = 0;
-    bool pulse_seen = false;
-
-    while (to_ms_since_boot(get_absolute_time()) - start < timeout) {
-        now = gpio_get(PIEZO_SENSOR);
-        if (prev == 1 && now == 0) {
-            pulse_start = to_ms_since_boot(get_absolute_time());
-            pulse_seen = true;
-        }
-        if (pulse_seen) {
-            uint32_t duration = to_ms_since_boot(get_absolute_time()) - pulse_start;
-            if (duration > 5) {
-                return true;
-            }
-        }
-        prev = now;
+void piezo_callback(uint gpio, uint32_t events) {
+    if (gpio == PIEZO_SENSOR && events & GPIO_IRQ_EDGE_FALL) {
+        pill_detected_flag = true;  // Pill detected on falling edge
     }
-    return false;
+}
+
+bool pill_dispensed(void) {
+    uint32_t start = to_ms_since_boot(get_absolute_time());
+    pill_detected_flag = false;  // Reset before waiting
+
+    while (to_ms_since_boot(get_absolute_time()) - start < TIMEOUT) {
+        if (pill_detected_flag) {
+            return true;  // Pill detected
+        }
+        tight_loop_contents();  // Keeps watchdog happy
+    }
+    return false;  // Timeout, no pill detected
 }
 
 // After moving approximate steps, fine-tune until sensor edge is detected

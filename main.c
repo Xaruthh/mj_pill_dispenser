@@ -46,15 +46,12 @@ int main(void) {
     gpio_init(PIEZO_SENSOR);
     gpio_set_dir(PIEZO_SENSOR, GPIO_IN);
     gpio_pull_up(PIEZO_SENSOR);
+    gpio_set_irq_enabled_with_callback(PIEZO_SENSOR, GPIO_IRQ_EDGE_FALL,true, &piezo_callback);
 
     // Setup LEDs
     pwm_led(LED_1);
     pwm_led(LED_2);
     pwm_led(LED_3);
-
-    // Welcome message
-    printf("\n   _______________________________\n");
-    printf("--| Welcome to the pill dispenser |--\n");
 
     while (true) {
         // Switch case statemachine for the main loop
@@ -64,6 +61,9 @@ int main(void) {
                 bool first_dispense = true; // For the first dispense so you don't have to wait timer before dispensing
                 // Print instructions and check flag so it doesn't flood the terminal
                 if (!printed) {
+                    // Welcome message
+                    printf("\n   _______________________________\n");
+                    printf("--| Welcome to the pill dispenser |--\n");
                     printf("\nOnly place pills after calibration! Press the middle button (SW_1) to first calibrate the system.\n");
                     printed = true;
                 }
@@ -79,7 +79,7 @@ int main(void) {
             case 2: // Calibration: rotate wheel until sensor aligns with drop tube
                 int alignment_steps = 0;
                 if (!printed) {
-                    printf("System is being calibrated, please wait...\n");
+                    printf("\nSystem is being calibrated, please wait...\n");
                     printed = true;
                 }
                 alignment_steps = calibrate_system(&steps_per_rev); // calibrate the system and go to state 3 (returns steps for alignment)
@@ -89,7 +89,7 @@ int main(void) {
                 break;
             case 3:
                 if (!printed) {
-                    printf("System has been calibrated, add your desired pills to the dispenser compartments.\n");
+                    printf("\nAdd your desired pills to the dispenser compartments.\n");
                     printf("Press the middle button (SW_1) to start dispensing pills every 30 seconds.\n");
                     printed = true;
                 }
@@ -107,7 +107,7 @@ int main(void) {
                 // Dispensing loop: every 30s rotate wheel and check piezo sensor
                 // If no pill detected, blink LEDs 5 times as a warning
                 if (!printed) {
-                    printf("Dispensing pills every 30 seconds...\n");
+                    printf("\nDispensing pills every 30 seconds...\n");
                     printed = true;
                 }
                 // Dispense delay times 1000 to convert microseconds to milliseconds -> get 30 sec for example.
