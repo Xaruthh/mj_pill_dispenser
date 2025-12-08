@@ -32,12 +32,12 @@
 #define DEBOUNCE_HIGH 100
 #define DEBOUNCE_MEDIUM 50
 #define DEBOUNCE_LOW 25
-#define SHORT_BLINK_DELAY 200
-#define LONG_BLINK_DELAY 500
+#define SHORT_BLINK_DELAY 150
+#define LONG_BLINK_DELAY 700
 #define ADC_1 1
-#define DISPENSE_DELAY 2000
+#define DISPENSE_DELAY 30000
 #define STEP_DELAY 2
-#define TIMEOUT 1000
+#define TIMEOUT 800
 #define DISPENSE_SLEEP 200
 
 //
@@ -71,6 +71,6 @@ bool button_pressed(int pin);
 
 void idle_blink(void);
 
-void blink_5_times(void);
+bool blink_5_times(void);
 
 #endif //MJ_PILL_DISPENSER_FUNCTIONS_H

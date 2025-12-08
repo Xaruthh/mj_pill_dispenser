@@ -70,6 +70,7 @@ int main(void) {
                 }
                 idle_blink(); // Idle blinking (non blocking)
                 if (!button_pressed(SW_1)) {
+                    set_brightness(MINIMUM_BRIGHTNESS);
                     state = 2;
                     printed = false; // Reset flag for next state
                     while (!button_pressed(SW_1))
@@ -83,7 +84,7 @@ int main(void) {
                     printf("\nSystem is being calibrated, please wait...\n");
                     printed = true;
                 }
-                alignment_steps = calibrate_system(&steps_per_rev); // calibrate the system and go to state 3 (returns steps for alignment)
+                alignment_steps = calibrate_system(&steps_per_rev); // Calibrate the system and go to state 3 (returns steps for alignment)
                 align_system(alignment_steps); // Calculate the OPTO window for steps and divide by 2 to get right steps to run for alignment
                 state = 3;
                 printed = false;
@@ -96,6 +97,7 @@ int main(void) {
                 }
                 set_brightness(BRIGHTNESS); // Turn LEDs on
                 if (!button_pressed(SW_1)) {
+                    set_brightness( MINIMUM_BRIGHTNESS); // Turn LEDs off when dispensing
                     last_dispense_time = get_absolute_time(); // Start timer from button press
                     dispenses_done = 0;
                     state = 4;
@@ -105,6 +107,7 @@ int main(void) {
                 }
                 break;
             case 4:
+                static bool blinking = false;
                 // Dispensing loop: every 30s rotate wheel and check piezo sensor
                 // If no pill detected, blink LEDs 5 times as a warning
                 if (!printed) {
@@ -118,14 +121,18 @@ int main(void) {
                     if (!pill_dispensed()) {
                         // If no pill was detected give a warning and blink LEDs 5 times
                         printf("No pill drop was detected, ensure you have loaded the dispenser.\n");
-                        blink_5_times();
-                    } else {
+                        blinking = true;
+                    }
+                    else {
                         printf("A pill was successfully dispensed.\n");
                     }
                     dispenses_done++;
                     last_dispense_time = get_absolute_time();
-
                     first_dispense = false; // Disable after first run
+                }
+                // If blinking is true blink 5 times - only if there was no pill detection (non-blocking).
+                if (blinking) {
+                    blinking = blink_5_times();
                 }
                 // Go back to beginning after dispensing all possible pill slots
                 if (dispenses_done >= 7) { // 7 = Max available slots

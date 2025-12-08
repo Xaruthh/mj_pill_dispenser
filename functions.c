@@ -117,7 +117,7 @@ bool pill_dispensed(void) {
     uint32_t start = to_ms_since_boot(get_absolute_time());
     pill_detected_flag = false;  // Reset flag
 
-    while (to_ms_since_boot(get_absolute_time()) - start < TIMEOUT) { // Using time since boot wait 1 second for pill drop.
+    while (to_ms_since_boot(get_absolute_time()) - start < TIMEOUT) { // Using time since boot wait x second for pill drop.
         if (pill_detected_flag) {
             return true;  // Pill detected
         }
@@ -179,33 +179,31 @@ void idle_blink(void) {
 }
 
 // Have to use non-blocking here as well so system doesn't go out of sync
-void blink_5_times(void) {
+// Returns true while blinking is active, false when finished
+bool blink_5_times(void) {
     static int blink_count = 0;
     static bool led_state = false;
     static uint32_t last_toggle = 0;
     static bool active = false;
-
     uint32_t now = to_ms_since_boot(get_absolute_time());
 
     if (!active) {
-        // Start blinking sequence
         blink_count = 0;
         led_state = false;
         last_toggle = now;
         active = true;
     }
-
-    if (active && now - last_toggle >= SHORT_BLINK_DELAY) {
-        // Toggle LED state
+    if (now - last_toggle >= SHORT_BLINK_DELAY) {
         set_brightness(led_state ? MINIMUM_BRIGHTNESS : BRIGHTNESS);
         led_state = !led_state;
         last_toggle = now;
-
-        if (!led_state) { // Count only full on/off cycles
+        if (!led_state) {
             blink_count++;
             if (blink_count >= 5) {
-                active = false; // Finished blinking
+                active = false;
+                set_brightness(MINIMUM_BRIGHTNESS);
             }
         }
     }
+    return active;
 }
