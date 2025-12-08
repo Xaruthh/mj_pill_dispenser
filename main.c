@@ -12,7 +12,7 @@ int main(void) {
     stdio_init_all();
 
     absolute_time_t last_dispense_time = get_absolute_time();
-    // Capture current time in ms during boot used later to dispense every 30s
+    // Capture current time in ms during boot used later to dispense every 30s or time you wish to use
     int state = 1;
     int steps_per_rev = 0;
     int dispenses_done = 0;
@@ -46,6 +46,7 @@ int main(void) {
     gpio_init(PIEZO_SENSOR);
     gpio_set_dir(PIEZO_SENSOR, GPIO_IN);
     gpio_pull_up(PIEZO_SENSOR);
+    // For the callback function interrupt
     gpio_set_irq_enabled_with_callback(PIEZO_SENSOR, GPIO_IRQ_EDGE_FALL,true, &piezo_callback);
 
     // Setup LEDs

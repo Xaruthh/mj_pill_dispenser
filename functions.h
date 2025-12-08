@@ -40,11 +40,10 @@
 #define TIMEOUT 1000
 #define DISPENSE_SLEEP 200
 
-
-
 //
 // Function prototypes below
 //
+
 // *** CALIBRATE STUFF ETC. ***
 void run_one_step(void);
 
