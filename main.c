@@ -4,7 +4,7 @@
 #include "pico/time.h"
 #include "pico/stdio.h"
 #include "hardware/gpio.h"
-
+#include "hardware/adc.h"
 
 
 // Main control loop for the pill dispenser
@@ -12,12 +12,12 @@
 int main(void) {
     stdio_init_all();
 
+    absolute_time_t last_dispense_time = get_absolute_time();
+    // Capture current time in ms during boot used later to dispense every 30s
     int state = 1;
     int steps_per_rev = 0;
     int dispenses_done = 0;
     bool printed = false; // To avoid flooding the terminal with prints...
-
-    absolute_time_t last_dispense_time = get_absolute_time();// Capture current time in ms during boot used later to dispense every 30s
 
     // Configure button and sensor inputs, and motor coil outputs below
     // Setup middle button
@@ -31,11 +31,6 @@ int main(void) {
     gpio_set_dir(OPTO_FORK, GPIO_IN);
     gpio_pull_up(OPTO_FORK);
 
-    // Setup PIEZO
-    gpio_init(PIEZO_SENSOR);
-    gpio_set_dir(PIEZO_SENSOR, GPIO_IN);
-    gpio_pull_up(PIEZO_SENSOR);
-
     gpio_init(COIL_A);
     gpio_set_dir(COIL_A, GPIO_OUT);
 
@@ -48,12 +43,23 @@ int main(void) {
     gpio_init(COIL_D);
     gpio_set_dir(COIL_D, GPIO_OUT);
 
+    // Setup gpio for piezo
+    gpio_init(PIEZO_SENSOR);
+    gpio_set_dir(PIEZO_SENSOR, GPIO_IN);
+    gpio_pull_up(PIEZO_SENSOR);
+    gpio_disable_pulls(PIEZO_SENSOR);
+
+    adc_init();
+    adc_gpio_init(PIEZO_SENSOR);
+    adc_select_input(ADC_1);
+
     // Setup LEDs
     pwm_led(LED_1);
     pwm_led(LED_2);
     pwm_led(LED_3);
 
     // Welcome message
+    printf("\n   _______________________________\n");
     printf("--| Welcome to the pill dispenser |--\n");
 
     while (true) {
@@ -61,6 +67,7 @@ int main(void) {
         switch (state) {
             // Idle state: blink LEDs until user presses the button
             case 1:
+                bool first_dispense = true; // For the first dispense so you don't have to wait timer before dispensing
                 // Print instructions and check flag so it doesn't flood the terminal
                 if (!printed) {
                     printf("\nOnly place pills after calibration! Press the middle button (SW_1) to first calibrate the system.\n");
@@ -76,14 +83,13 @@ int main(void) {
                 break;
 
             case 2: // Calibration: rotate wheel until sensor aligns with drop tube
+                int alignment_steps = 0;
                 if (!printed) {
                     printf("System is being calibrated, please wait...\n");
                     printed = true;
                 }
-
-                calibrate_system(&steps_per_rev); // calibrate the system and go to state 3
-                align_system(steps_per_rev);
-
+                alignment_steps = calibrate_system(&steps_per_rev); // calibrate the system and go to state 3 (returns steps for alignment)
+                align_system(alignment_steps); // Calculate the OPTO window for steps and divide by 2 to get right steps to run for alignment
                 state = 3;
                 printed = false;
                 break;
@@ -95,9 +101,8 @@ int main(void) {
                 }
                 set_brightness(BRIGHTNESS); // Turn LEDs on
                 if (!button_pressed(SW_1)) {
-                    dispenses_done = 0;
-                    first_dispense(&dispenses_done, &steps_per_rev);
                     last_dispense_time = get_absolute_time(); // Start timer from button press
+                    dispenses_done = 0;
                     state = 4;
                     printed = false;
                     while (!button_pressed(SW_1))
@@ -111,7 +116,8 @@ int main(void) {
                     printf("Dispensing pills every 30 seconds...\n");
                     printed = true;
                 }
-                if (absolute_time_diff_us(last_dispense_time, get_absolute_time()) >= DISPENSE_DELAY * 1000) {
+                // Dispense delay times 1000 to convert microseconds to milliseconds -> get 30 sec for example.
+                if (first_dispense || absolute_time_diff_us(last_dispense_time, get_absolute_time()) >= DISPENSE_DELAY * 1000) {
                     // = 30 seconds delay
                     run_system(1, &steps_per_rev); // Run once
                     if (!pill_dispensed()) {
@@ -123,6 +129,8 @@ int main(void) {
                     }
                     dispenses_done++;
                     last_dispense_time = get_absolute_time();
+
+                    first_dispense = false; // Disable after first run
                 }
                 // Go back to beginning after dispensing all possible pill slots
                 if (dispenses_done >= 7) { // 7 = Max available slots
