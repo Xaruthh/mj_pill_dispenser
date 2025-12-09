@@ -1,6 +1,5 @@
-#include "functions.h"
+#include  "functions.h"
 #include <stdbool.h>
-#include <string.h>
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/gpio.h"

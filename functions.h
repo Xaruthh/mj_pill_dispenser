@@ -29,16 +29,12 @@
 
 // General macros
 #define SPIN_THRICE 3
-#define DEBOUNCE_HIGH 100
 #define DEBOUNCE_MEDIUM 50
-#define DEBOUNCE_LOW 25
 #define SHORT_BLINK_DELAY 150
 #define LONG_BLINK_DELAY 700
-#define ADC_1 1
-#define DISPENSE_DELAY 30000
+#define DISPENSE_DELAY 3000
 #define STEP_DELAY 2
 #define TIMEOUT 800
-#define DISPENSE_SLEEP 200
 
 //
 // Function prototypes below
